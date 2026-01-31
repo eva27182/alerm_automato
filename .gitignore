@@ -38,3 +38,10 @@ Thumbs.db
 
 # ログファイル
 *.log
+.idea/*
+.gitignore
+.metadata
+alerm_automato.iml
+analysis_options.yaml
+test/*
+pubspec.lock
