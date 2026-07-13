@@ -7,29 +7,52 @@ const Map<String, IconData> kPresetIcons = {
 };
 const String kDefaultIconKey = 'alarm';
 
+/// 1件のアラーム（時刻＋任意のラベル）。
+class AlarmEntry {
+  TimeOfDay time;
+  String label;
+
+  AlarmEntry({required this.time, this.label = ''});
+
+  Map<String, dynamic> toJson() => {
+    'hour': time.hour,
+    'minute': time.minute,
+    'label': label,
+  };
+}
+
 class AlarmPreset {
   String name;
-  List<TimeOfDay> times;
+  List<AlarmEntry> alarms;
   String iconKey;
 
   AlarmPreset({
     required this.name,
-    required this.times,
+    required this.alarms,
     this.iconKey = kDefaultIconKey,
   });
 
   IconData get icon => kPresetIcons[iconKey] ?? kPresetIcons[kDefaultIconKey]!;
 
+  // AlarmEntry は可変なので、リストごと要素も複製して元プリセットと共有されないようにする。
+  AlarmPreset duplicate() => AlarmPreset(
+    name: '$nameのコピー',
+    alarms: alarms
+        .map((a) => AlarmEntry(time: a.time, label: a.label))
+        .toList(),
+    iconKey: iconKey,
+  );
+
   Map<String, dynamic> toJson() => {
     'name': name,
-    'times': times.map((t) => {'hour': t.hour, 'minute': t.minute}).toList(),
+    'times': alarms.map((a) => a.toJson()).toList(),
     'icon': iconKey,
   };
 
   // 保存データは手動編集や旧バージョンで壊れている可能性があるため、
   // 型・範囲を検証し、不正な要素は捨てて読み込みを継続する。
   factory AlarmPreset.fromJson(Map<String, dynamic> json) {
-    final times = <TimeOfDay>[];
+    final alarms = <AlarmEntry>[];
     final rawTimes = json['times'];
     if (rawTimes is List) {
       for (final t in rawTimes) {
@@ -37,7 +60,12 @@ class AlarmPreset {
         final hour = t['hour'];
         final minute = t['minute'];
         if (hour is int && minute is int && _isValidTime(hour, minute)) {
-          times.add(TimeOfDay(hour: hour, minute: minute));
+          // ラベルは旧バージョンのデータには無いため、無ければ空文字にフォールバックする。
+          final rawLabel = t['label'];
+          alarms.add(AlarmEntry(
+            time: TimeOfDay(hour: hour, minute: minute),
+            label: rawLabel is String ? rawLabel : '',
+          ));
         }
       }
     }
@@ -45,7 +73,7 @@ class AlarmPreset {
     final rawIcon = json['icon'];
     return AlarmPreset(
       name: rawName is String && rawName.isNotEmpty ? rawName : '無題のセット',
-      times: times,
+      alarms: alarms,
       // 旧バージョン（codePoint保存）のデータは既知のキーでないため既定アイコンにフォールバックする。
       iconKey: rawIcon is String && kPresetIcons.containsKey(rawIcon)
           ? rawIcon

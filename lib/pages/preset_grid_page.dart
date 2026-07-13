@@ -30,7 +30,7 @@ class _PresetGridPageState extends State<PresetGridPage> {
           [
             AlarmPreset(
               name: '平日用',
-              times: [const TimeOfDay(hour: 7, minute: 0)],
+              alarms: [AlarmEntry(time: const TimeOfDay(hour: 7, minute: 0))],
               iconKey: 'work',
             ),
           ];
@@ -44,6 +44,40 @@ class _PresetGridPageState extends State<PresetGridPage> {
         const SnackBar(content: Text('保存に失敗しました')),
       );
     }
+  }
+
+  void _showPresetMenu(int index) {
+    showModalBottomSheet(
+      context: context,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.copy),
+              title: const Text('複製'),
+              onTap: () {
+                Navigator.pop(sheetContext);
+                _duplicatePreset(index);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.delete_outline, color: Colors.red),
+              title: const Text('削除', style: TextStyle(color: Colors.red)),
+              onTap: () {
+                Navigator.pop(sheetContext);
+                _confirmDelete(index);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _duplicatePreset(int index) {
+    setState(() => _presets.insert(index + 1, _presets[index].duplicate()));
+    _saveData();
   }
 
   void _confirmDelete(int index) {
@@ -85,7 +119,7 @@ class _PresetGridPageState extends State<PresetGridPage> {
       () => _presets.add(
         AlarmPreset(
           name: '新規セット',
-          times: [const TimeOfDay(hour: 8, minute: 0)],
+          alarms: [AlarmEntry(time: const TimeOfDay(hour: 8, minute: 0))],
         ),
       ),
     );
@@ -117,7 +151,7 @@ class _PresetGridPageState extends State<PresetGridPage> {
   Widget _buildPresetCard(AlarmPreset preset, int index) {
     return InkWell(
       onTap: () => _openEditor(preset),
-      onLongPress: () => _confirmDelete(index),
+      onLongPress: () => _showPresetMenu(index),
       child: Card(
         elevation: 4,
         child: Stack(
@@ -135,7 +169,7 @@ class _PresetGridPageState extends State<PresetGridPage> {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  Text('${preset.times.length} 個設定中'),
+                  Text('${preset.alarms.length} 個設定中'),
                 ],
               ),
             ),

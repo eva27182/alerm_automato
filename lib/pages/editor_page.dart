@@ -30,14 +30,14 @@ class _EditorPageState extends State<EditorPage> {
 
   Future<void> _applyAll() async {
     if (_isProcessing) return; // 処理中の二重実行を防止
-    if (widget.preset.times.isEmpty) {
+    if (widget.preset.alarms.isEmpty) {
       _showSnackBar('時間が1つも設定されていません');
       return;
     }
     setState(() => _isProcessing = true); // ローディング開始
 
     try {
-      await _alarmSetter.setAll(widget.preset.times);
+      await _alarmSetter.setAll(widget.preset.alarms);
       _showSnackBar('セット完了！');
     } catch (_) {
       _showSnackBar('アラームを設定できませんでした。時計アプリを確認してください。');
@@ -57,10 +57,45 @@ class _EditorPageState extends State<EditorPage> {
   Future<void> _pickTime(int index) async {
     final picked = await showTimePicker(
       context: context,
-      initialTime: widget.preset.times[index],
+      initialTime: widget.preset.alarms[index].time,
     );
     if (picked != null && mounted) {
-      setState(() => widget.preset.times[index] = picked);
+      setState(() => widget.preset.alarms[index].time = picked);
+    }
+  }
+
+  Future<void> _editLabel(int index) async {
+    final controller = TextEditingController(
+      text: widget.preset.alarms[index].label,
+    );
+    final newLabel = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('ラベル'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(
+            hintText: '例: 起床、ゴミ出し',
+            border: OutlineInputBorder(),
+          ),
+          onSubmitted: (val) => Navigator.pop(dialogContext, val),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('キャンセル'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, controller.text),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (newLabel != null && mounted) {
+      setState(() => widget.preset.alarms[index].label = newLabel.trim());
     }
   }
 
@@ -89,26 +124,44 @@ class _EditorPageState extends State<EditorPage> {
                   ),
                   Expanded(
                     child: ListView.builder(
-                      itemCount: widget.preset.times.length,
+                      itemCount: widget.preset.alarms.length,
                       itemBuilder: (context, index) {
-                        final time = widget.preset.times[index];
+                        final alarm = widget.preset.alarms[index];
                         return ListTile(
                           leading: const Icon(Icons.access_time),
                           title: Text(
-                            time.format(context),
+                            alarm.time.format(context),
                             style: const TextStyle(
                               fontSize: 24,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
-                          trailing: IconButton(
-                            icon: const Icon(
-                              Icons.remove_circle_outline,
-                              color: Colors.redAccent,
+                          subtitle: Text(
+                            alarm.label.isEmpty ? 'ラベルなし' : alarm.label,
+                            style: TextStyle(
+                              color: alarm.label.isEmpty
+                                  ? Colors.grey
+                                  : null,
                             ),
-                            onPressed: () => setState(
-                              () => widget.preset.times.removeAt(index),
-                            ),
+                          ),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.label_outline),
+                                tooltip: 'ラベルを編集',
+                                onPressed: () => _editLabel(index),
+                              ),
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.remove_circle_outline,
+                                  color: Colors.redAccent,
+                                ),
+                                onPressed: () => setState(
+                                  () => widget.preset.alarms.removeAt(index),
+                                ),
+                              ),
+                            ],
                           ),
                           onTap: () => _pickTime(index),
                         );
@@ -141,8 +194,8 @@ class _EditorPageState extends State<EditorPage> {
           Expanded(
             child: OutlinedButton.icon(
               onPressed: () => setState(
-                () => widget.preset.times.add(
-                  const TimeOfDay(hour: 8, minute: 0),
+                () => widget.preset.alarms.add(
+                  AlarmEntry(time: const TimeOfDay(hour: 8, minute: 0)),
                 ),
               ),
               icon: const Icon(Icons.add),
