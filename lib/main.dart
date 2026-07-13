@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:android_intent_plus/android_intent.dart';
+import 'package:android_intent_plus/flag.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'dart:convert';
@@ -182,6 +183,12 @@ class _EditorPageState extends State<EditorPage> {
     for (var time in widget.preset.times) {
       final intent = AndroidIntent(
         action: 'android.intent.action.SET_ALARM',
+        // 画面切り替えアニメーションを消し、時計アプリを履歴に残さない
+        flags: <int>[
+          Flag.FLAG_ACTIVITY_NEW_TASK,
+          Flag.FLAG_ACTIVITY_NO_ANIMATION,
+          Flag.FLAG_ACTIVITY_NO_HISTORY,
+        ],
         arguments: <String, dynamic>{
           'android.intent.extra.alarm.HOUR': time.hour,
           'android.intent.extra.alarm.MINUTES': time.minute,
@@ -191,6 +198,19 @@ class _EditorPageState extends State<EditorPage> {
       await intent.launch();
       await Future.delayed(const Duration(milliseconds: 600)); // チラつき抑制のための待機
     }
+
+    // 時計アプリが前面に残るため、自アプリを前面に呼び戻す
+    const backIntent = AndroidIntent(
+      action: 'android.intent.action.MAIN',
+      package: 'com.example.alerm_automato',
+      componentName: 'com.example.alerm_automato.MainActivity',
+      flags: <int>[
+        Flag.FLAG_ACTIVITY_NEW_TASK,
+        Flag.FLAG_ACTIVITY_REORDER_TO_FRONT,
+        Flag.FLAG_ACTIVITY_NO_ANIMATION,
+      ],
+    );
+    await backIntent.launch();
 
     if (mounted) {
       setState(() => _isProcessing = false); // ローディング終了
