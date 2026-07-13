@@ -18,27 +18,38 @@ void main() {
   ));
 }
 
+// tree-shakingを維持するため、使用可能なアイコンは固定の定数マップに限定する。
+const Map<String, IconData> kPresetIcons = {
+  'alarm': Icons.alarm,
+  'work': Icons.work,
+};
+const String kDefaultIconKey = 'alarm';
+
 class AlarmPreset {
   String name;
   List<TimeOfDay> times;
-  IconData icon;
+  String iconKey;
 
-  AlarmPreset({required this.name, required this.times, this.icon = Icons.alarm});
+  AlarmPreset({required this.name, required this.times, this.iconKey = kDefaultIconKey});
+
+  IconData get icon => kPresetIcons[iconKey] ?? kPresetIcons[kDefaultIconKey]!;
 
   Map<String, dynamic> toJson() => {
     'name': name,
     'times': times.map((t) => {'hour': t.hour, 'minute': t.minute}).toList(),
-    'icon': icon.codePoint,
+    'icon': iconKey,
   };
 
   factory AlarmPreset.fromJson(Map<String, dynamic> json) {
     var timesList = (json['times'] as List)
         .map((t) => TimeOfDay(hour: t['hour'], minute: t['minute']))
         .toList();
+    final rawIcon = json['icon'];
     return AlarmPreset(
       name: json['name'],
       times: timesList,
-      icon: IconData(json['icon'], fontFamily: 'MaterialIcons'),
+      // 旧バージョン（codePoint保存）のデータは既知のキーでないため既定アイコンにフォールバックする。
+      iconKey: rawIcon is String && kPresetIcons.containsKey(rawIcon) ? rawIcon : kDefaultIconKey,
     );
   }
 }
@@ -70,7 +81,7 @@ class _PresetGridPageState extends State<PresetGridPage> {
     } else {
       setState(() {
         _presets = [
-          AlarmPreset(name: '平日用', times: [const TimeOfDay(hour: 7, minute: 0)], icon: Icons.work),
+          AlarmPreset(name: '平日用', times: [const TimeOfDay(hour: 7, minute: 0)], iconKey: 'work'),
         ];
       });
     }

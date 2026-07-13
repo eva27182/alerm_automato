@@ -1,7 +1,7 @@
 #!/bin/sh
 # This is a generated file; do not edit or check into version control.
-export "FLUTTER_ROOT=/Users/koyo/flutter"
-export "FLUTTER_APPLICATION_PATH=/Users/koyo/VScodeProjects/alerm_automato"
+export "FLUTTER_ROOT=C:\Users\eva\Flutter\flutter_windows_3.29.3-stable\flutter"
+export "FLUTTER_APPLICATION_PATH=C:\Users\eva\AndroidStudioProjects\alermAutomation\alerm_automato"
 export "COCOAPODS_PARALLEL_CODE_SIGN=true"
 export "FLUTTER_BUILD_DIR=build"
 export "FLUTTER_BUILD_NAME=1.0.0"
