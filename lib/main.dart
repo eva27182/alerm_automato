@@ -191,14 +191,22 @@ class _EditorPageState extends State<EditorPage> {
   Future<void> _applyAll() async {
     setState(() => _isProcessing = true); // ローディング開始
 
+    // 先に時計アプリのアラーム一覧を前面に出し、追加が終わるまで表示したままにする。
+    // 以降のSET_ALARMは時計アプリの画面の上で処理されるため、
+    // 自アプリとの行き来によるちらつきが発生しない。
+    const showIntent = AndroidIntent(
+      action: 'android.intent.action.SHOW_ALARMS',
+      flags: <int>[Flag.FLAG_ACTIVITY_NEW_TASK],
+    );
+    await showIntent.launch();
+    await Future.delayed(const Duration(milliseconds: 800)); // 時計アプリの起動待ち
+
     for (var time in widget.preset.times) {
       final intent = AndroidIntent(
         action: 'android.intent.action.SET_ALARM',
-        // 画面切り替えアニメーションを消し、時計アプリを履歴に残さない
         flags: <int>[
           Flag.FLAG_ACTIVITY_NEW_TASK,
           Flag.FLAG_ACTIVITY_NO_ANIMATION,
-          Flag.FLAG_ACTIVITY_NO_HISTORY,
         ],
         arguments: <String, dynamic>{
           'android.intent.extra.alarm.HOUR': time.hour,
@@ -207,10 +215,10 @@ class _EditorPageState extends State<EditorPage> {
         },
       );
       await intent.launch();
-      await Future.delayed(const Duration(milliseconds: 600)); // チラつき抑制のための待機
+      await Future.delayed(const Duration(milliseconds: 600)); // 登録反映の待機
     }
 
-    // 時計アプリが前面に残るため、自アプリを前面に呼び戻す
+    // 全アラームの追加が終わったら自アプリを前面に呼び戻す
     const backIntent = AndroidIntent(
       action: 'android.intent.action.MAIN',
       package: 'com.example.alerm_automato',
