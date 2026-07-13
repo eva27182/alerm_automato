@@ -7,15 +7,17 @@ import 'dart:convert';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(MaterialApp(
-    debugShowCheckedModeBanner: false,
-    theme: ThemeData(
-      useMaterial3: true,
-      colorSchemeSeed: Colors.blue,
-      textTheme: GoogleFonts.notoSansJpTextTheme(),
+  runApp(
+    MaterialApp(
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        useMaterial3: true,
+        colorSchemeSeed: Colors.blue,
+        textTheme: GoogleFonts.notoSansJpTextTheme(),
+      ),
+      home: const PresetGridPage(),
     ),
-    home: const PresetGridPage(),
-  ));
+  );
 }
 
 // tree-shakingを維持するため、使用可能なアイコンは固定の定数マップに限定する。
@@ -30,7 +32,11 @@ class AlarmPreset {
   List<TimeOfDay> times;
   String iconKey;
 
-  AlarmPreset({required this.name, required this.times, this.iconKey = kDefaultIconKey});
+  AlarmPreset({
+    required this.name,
+    required this.times,
+    this.iconKey = kDefaultIconKey,
+  });
 
   IconData get icon => kPresetIcons[iconKey] ?? kPresetIcons[kDefaultIconKey]!;
 
@@ -49,7 +55,9 @@ class AlarmPreset {
       name: json['name'],
       times: timesList,
       // 旧バージョン（codePoint保存）のデータは既知のキーでないため既定アイコンにフォールバックする。
-      iconKey: rawIcon is String && kPresetIcons.containsKey(rawIcon) ? rawIcon : kDefaultIconKey,
+      iconKey: rawIcon is String && kPresetIcons.containsKey(rawIcon)
+          ? rawIcon
+          : kDefaultIconKey,
     );
   }
 }
@@ -81,7 +89,11 @@ class _PresetGridPageState extends State<PresetGridPage> {
     } else {
       setState(() {
         _presets = [
-          AlarmPreset(name: '平日用', times: [const TimeOfDay(hour: 7, minute: 0)], iconKey: 'work'),
+          AlarmPreset(
+            name: '平日用',
+            times: [const TimeOfDay(hour: 7, minute: 0)],
+            iconKey: 'work',
+          ),
         ];
       });
     }
@@ -89,7 +101,9 @@ class _PresetGridPageState extends State<PresetGridPage> {
 
   Future<void> _saveData() async {
     final prefs = await SharedPreferences.getInstance();
-    final String encoded = json.encode(_presets.map((p) => p.toJson()).toList());
+    final String encoded = json.encode(
+      _presets.map((p) => p.toJson()).toList(),
+    );
     await prefs.setString('alarm_presets', encoded);
   }
 
@@ -100,7 +114,10 @@ class _PresetGridPageState extends State<PresetGridPage> {
         title: const Text('削除'),
         content: Text('「${_presets[index].name}」を削除しますか？'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('キャンセル')),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('キャンセル'),
+          ),
           TextButton(
             onPressed: () {
               setState(() => _presets.removeAt(index));
@@ -139,7 +156,10 @@ class _PresetGridPageState extends State<PresetGridPage> {
   Widget _buildPresetCard(AlarmPreset preset, int index) {
     return InkWell(
       onTap: () async {
-        await Navigator.push(context, MaterialPageRoute(builder: (context) => EditorPage(preset: preset)));
+        await Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => EditorPage(preset: preset)),
+        );
         _saveData();
         setState(() {});
       },
@@ -154,12 +174,26 @@ class _PresetGridPageState extends State<PresetGridPage> {
                 children: [
                   Icon(preset.icon, size: 50, color: Colors.blue),
                   const SizedBox(height: 10),
-                  Text(preset.name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  Text(
+                    preset.name,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                   Text('${preset.times.length} 個設定中'),
                 ],
               ),
             ),
-            const Positioned(top: 8, right: 8, child: Icon(Icons.delete_outline, size: 18, color: Colors.black26)),
+            const Positioned(
+              top: 8,
+              right: 8,
+              child: Icon(
+                Icons.delete_outline,
+                size: 18,
+                color: Colors.black26,
+              ),
+            ),
           ],
         ),
       ),
@@ -169,10 +203,20 @@ class _PresetGridPageState extends State<PresetGridPage> {
   Widget _buildAddCard() {
     return InkWell(
       onTap: () {
-        setState(() => _presets.add(AlarmPreset(name: '新規セット', times: [const TimeOfDay(hour: 8, minute: 0)])));
+        setState(
+          () => _presets.add(
+            AlarmPreset(
+              name: '新規セット',
+              times: [const TimeOfDay(hour: 8, minute: 0)],
+            ),
+          ),
+        );
         _saveData();
       },
-      child: Card(color: Colors.grey[100], child: const Icon(Icons.add, size: 50, color: Colors.grey)),
+      child: Card(
+        color: Colors.grey[100],
+        child: const Icon(Icons.add, size: 50, color: Colors.grey),
+      ),
     );
   }
 }
@@ -189,6 +233,7 @@ class _EditorPageState extends State<EditorPage> {
   bool _isProcessing = false; // ★ 処理中かどうかを管理するフラグ
 
   Future<void> _applyAll() async {
+    if (_isProcessing) return; // 処理中の二重実行を防止
     setState(() => _isProcessing = true); // ローディング開始
 
     // 先に時計アプリのアラーム一覧を前面に出し、追加が終わるまで表示したままにする。
@@ -233,79 +278,142 @@ class _EditorPageState extends State<EditorPage> {
 
     if (mounted) {
       setState(() => _isProcessing = false); // ローディング終了
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('セット完了！')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('セット完了！')));
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('編集')),
-      // ★ Stack を使って UI レイヤーを重ねる
-      body: Stack(
-        children: [
-          SafeArea(
-            child: Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: TextField(
-                    decoration: const InputDecoration(labelText: 'セット名', border: OutlineInputBorder()),
-                    controller: TextEditingController(text: widget.preset.name),
-                    onChanged: (val) => widget.preset.name = val,
+    // ★ 処理中は戻る操作（戻るボタン・戻るジェスチャー・AppBarの←）を無効化
+    return PopScope(
+      canPop: !_isProcessing,
+      child: Scaffold(
+        appBar: AppBar(title: const Text('編集')),
+        // ★ Stack を使って UI レイヤーを重ねる
+        body: Stack(
+          children: [
+            SafeArea(
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: TextField(
+                      decoration: const InputDecoration(
+                        labelText: 'セット名',
+                        border: OutlineInputBorder(),
+                      ),
+                      controller: TextEditingController(
+                        text: widget.preset.name,
+                      ),
+                      onChanged: (val) => widget.preset.name = val,
+                    ),
                   ),
-                ),
-                Expanded(
-                  child: ListView.builder(
-                    itemCount: widget.preset.times.length,
-                    itemBuilder: (context, index) {
-                      final time = widget.preset.times[index];
-                      return ListTile(
-                        leading: const Icon(Icons.access_time),
-                        title: Text(time.format(context), style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-                        trailing: IconButton(
-                          icon: const Icon(Icons.remove_circle_outline, color: Colors.redAccent),
-                          onPressed: () => setState(() => widget.preset.times.removeAt(index)),
+                  Expanded(
+                    child: ListView.builder(
+                      itemCount: widget.preset.times.length,
+                      itemBuilder: (context, index) {
+                        final time = widget.preset.times[index];
+                        return ListTile(
+                          leading: const Icon(Icons.access_time),
+                          title: Text(
+                            time.format(context),
+                            style: const TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          trailing: IconButton(
+                            icon: const Icon(
+                              Icons.remove_circle_outline,
+                              color: Colors.redAccent,
+                            ),
+                            onPressed: () => setState(
+                              () => widget.preset.times.removeAt(index),
+                            ),
+                          ),
+                          onTap: () async {
+                            final picked = await showTimePicker(
+                              context: context,
+                              initialTime: time,
+                            );
+                            if (picked != null)
+                              setState(
+                                () => widget.preset.times[index] = picked,
+                              );
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                  // 下部ボタン
+                  Container(
+                    padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black12,
+                          blurRadius: 10,
+                          offset: Offset(0, -2),
                         ),
-                        onTap: () async {
-                          final picked = await showTimePicker(context: context, initialTime: time);
-                          if (picked != null) setState(() => widget.preset.times[index] = picked);
-                        },
-                      );
-                    },
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () => setState(
+                              () => widget.preset.times.add(
+                                const TimeOfDay(hour: 8, minute: 0),
+                              ),
+                            ),
+                            icon: const Icon(Icons.add),
+                            label: const Text('時間を追加'),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: _applyAll,
+                            icon: const Icon(Icons.alarm_on),
+                            label: const Text('一括設定'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.blue,
+                              foregroundColor: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                // 下部ボタン
-                Container(
-                  padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
-                  decoration: const BoxDecoration(color: Colors.white, boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, -2))]),
-                  child: Row(
-                    children: [
-                      Expanded(child: OutlinedButton.icon(onPressed: () => setState(() => widget.preset.times.add(const TimeOfDay(hour: 8, minute: 0))), icon: const Icon(Icons.add), label: const Text('時間を追加'))),
-                      const SizedBox(width: 12),
-                      Expanded(child: ElevatedButton.icon(onPressed: _applyAll, icon: const Icon(Icons.alarm_on), label: const Text('一括設定'), style: ElevatedButton.styleFrom(backgroundColor: Colors.blue, foregroundColor: Colors.white))),
-                    ],
-                  ),
-                )
-              ],
-            ),
-          ),
-          // ★ 処理中に最前面に表示するオーバーレイレイヤー
-          if (_isProcessing)
-            Container(
-              color: Colors.black54, // 半透明の黒
-              child: const Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    CircularProgressIndicator(color: Colors.white),
-                    SizedBox(height: 20),
-                    Text('アラームを設定中...', style: TextStyle(color: Colors.white, fontSize: 18)),
-                  ],
-                ),
+                ],
               ),
             ),
-        ],
+            // ★ 処理中に最前面に表示するオーバーレイレイヤー
+            if (_isProcessing)
+              const Stack(
+                children: [
+                  // 下のUIへのタップを確実に遮断するバリア
+                  ModalBarrier(color: Colors.black54, dismissible: false),
+                  Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        CircularProgressIndicator(color: Colors.white),
+                        SizedBox(height: 20),
+                        Text(
+                          'アラームを設定中...',
+                          style: TextStyle(color: Colors.white, fontSize: 18),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+          ],
+        ),
       ),
     );
   }
